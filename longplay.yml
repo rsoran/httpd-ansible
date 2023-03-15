@@ -1,0 +1,65 @@
+---
+- name: Installing homework1
+  hosts: centos
+  gather_facts: yes
+  vars_files:
+         -  myvariables.yml
+  tasks:
+          - name: Installing httpd firewalld mariadb-server php php-mysqlnd
+            yum:
+                    name: 
+                      - "{{ item }}"
+                    state: present
+            register: user_tasks   
+            
+            loop:
+                    - httpd
+                    - firewalld
+                    - mariadb-server
+                    - php
+                    - php-mysqlnd
+            when: ansible_distribution == "CentOS"
+         
+          - name: Print what work it has done 
+            debug:
+                    msg: "{{ item }}  has been installed succesfully"
+            loop:
+                    - httpd
+                    - firewalld
+                    - mariadb-server
+                    - php
+                    - php-mysqlnd
+
+          - name: Enabling and starting services of httpd firewalld & mariadb-server
+            service:
+                    name: "{{ item }}"
+                    enabled: true
+                    state: restarted
+
+            loop:
+                    - httpd
+                    - firewalld
+                    - mariadb.service
+           
+                    
+          - name: permits http
+            firewalld:
+                    service: http
+                    permanent: true
+                    state: enabled
+                    immediate: yes
+          - name: Copy Configuring Conf.D file
+            template:
+                    src: config.j2
+                    dest: /etc/httpd/conf.d/{{ website_conf }}
+         
+          - name: configuring httpd
+            template:
+                    src: virtualhost.html.j2
+                    dest: "{{ doc_root }}/index.html"
+            notify: Restart httpd
+  handlers:
+          - name: Restart httpd
+            service:
+                    name: httpd
+                    state: restarted  
